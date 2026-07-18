@@ -1,364 +1,249 @@
-import tkinter as tk
+import customtkinter as ctk
+import random
+import time
 
 # ----------------------------
-# Window
+# Theme & Config
 # ----------------------------
+ctk.set_appearance_mode("dark")
+ctk.set_default_color_theme("blue")
 
-root = tk.Tk()
-root.title("Tic Tac Toe AI")
-root.geometry("500x650")
-root.configure(bg="#1e1e1e")
+BG_COLOR = "#0F172A"
+PANEL_COLOR = "#1E293B"
+TEXT_COLOR = "#F8FAFC"
+X_COLOR = "#38BDF8"       # Light blue for X
+O_COLOR = "#F43F5E"       # Pink/Red for O
+HOVER_COLOR = "#334155"
 
-# ----------------------------
-# Scores
-# ----------------------------
+class TicTacToeApp(ctk.CTk):
+    def __init__(self):
+        super().__init__()
 
-player_score = 0
-ai_score = 0
+        self.title("Tic Tac Toe - AI Edition")
+        self.geometry("550x750")
+        self.configure(fg_color=BG_COLOR)
+        
+        # ----------------------------
+        # State
+        # ----------------------------
+        self.player_score = 0
+        self.ai_score = 0
+        self.board = [""] * 9
+        self.game_over = False
+        self.difficulty = ctk.StringVar(value="Hard (Unbeatable)")
 
-# ----------------------------
-# Game Data
-# ----------------------------
+        self.setup_ui()
 
-board = [""] * 9
-buttons = []
-game_over = False
+    def setup_ui(self):
+        # Header
+        self.title_label = ctk.CTkLabel(
+            self, 
+            text="TIC TAC TOE", 
+            font=("Helvetica", 32, "bold"),
+            text_color=X_COLOR
+        )
+        self.title_label.pack(pady=(30, 10))
 
-# ----------------------------
-# UI
-# ----------------------------
+        # Score Board
+        self.score_frame = ctk.CTkFrame(self, fg_color=PANEL_COLOR, corner_radius=15)
+        self.score_frame.pack(pady=10, padx=40, fill="x")
+        
+        self.score_label = ctk.CTkLabel(
+            self.score_frame, 
+            text=f"Player (X): {self.player_score}    AI (O): {self.ai_score}", 
+            font=("Helvetica", 18, "bold"),
+            text_color=TEXT_COLOR
+        )
+        self.score_label.pack(pady=15)
 
-title_label = tk.Label(
-    root,
-    text="TIC TAC TOE AI",
-    bg="#1e1e1e",
-    fg="white",
-    font=("Helvetica", 22, "bold")
-)
-title_label.pack(pady=15)
+        # Status & Difficulty
+        self.status_label = ctk.CTkLabel(
+            self, 
+            text="Your Turn", 
+            font=("Helvetica", 18),
+            text_color="#10B981" # Green
+        )
+        self.status_label.pack(pady=10)
 
-score_label = tk.Label(
-    root,
-    text="Player (X): 0    AI (O): 0",
-    bg="#1e1e1e",
-    fg="white",
-    font=("Helvetica", 14)
-)
-score_label.pack()
+        self.difficulty_menu = ctk.CTkOptionMenu(
+            self, 
+            values=["Easy", "Medium", "Hard (Unbeatable)"],
+            variable=self.difficulty,
+            fg_color=PANEL_COLOR,
+            button_color=PANEL_COLOR,
+            button_hover_color=HOVER_COLOR,
+            font=("Helvetica", 14),
+            command=self.reset_game
+        )
+        self.difficulty_menu.pack(pady=10)
 
-status_label = tk.Label(
-    root,
-    text="Your Turn",
-    bg="#1e1e1e",
-    fg="#00ff99",
-    font=("Helvetica", 14, "bold")
-)
-status_label.pack(pady=10)
-
-board_frame = tk.Frame(
-    root,
-    bg="#1e1e1e"
-)
-board_frame.pack(pady=20)
-
-# ----------------------------
-# Winner Logic
-# ----------------------------
-
-def check_winner_state(temp_board):
-
-    wins = [
-        [0,1,2],
-        [3,4,5],
-        [6,7,8],
-        [0,3,6],
-        [1,4,7],
-        [2,5,8],
-        [0,4,8],
-        [2,4,6]
-    ]
-
-    for combo in wins:
-
-        a,b,c = combo
-
-        if (
-            temp_board[a] != "" and
-            temp_board[a] == temp_board[b] == temp_board[c]
-        ):
-            return temp_board[a]
-
-    if "" not in temp_board:
-        return "Draw"
-
-    return None
-
-# ----------------------------
-# Minimax
-# ----------------------------
-
-def minimax(temp_board, is_maximizing):
-
-    result = check_winner_state(temp_board)
-
-    if result == "O":
-        return 1
-
-    elif result == "X":
-        return -1
-
-    elif result == "Draw":
-        return 0
-
-    if is_maximizing:
-
-        best_score = -100
-
+        # Game Board
+        self.board_frame = ctk.CTkFrame(self, fg_color="transparent")
+        self.board_frame.pack(pady=20)
+        
+        self.buttons = []
         for i in range(9):
-
-            if temp_board[i] == "":
-
-                temp_board[i] = "O"
-
-                score = minimax(
-                    temp_board,
-                    False
-                )
-
-                temp_board[i] = ""
-
-                best_score = max(
-                    score,
-                    best_score
-                )
-
-        return best_score
-
-    else:
-
-        best_score = 100
-
-        for i in range(9):
-
-            if temp_board[i] == "":
-
-                temp_board[i] = "X"
-
-                score = minimax(
-                    temp_board,
-                    True
-                )
-
-                temp_board[i] = ""
-
-                best_score = min(
-                    score,
-                    best_score
-                )
-
-        return best_score
-
-# ----------------------------
-# AI Move
-# ----------------------------
-
-def ai_move():
-
-    global game_over
-
-    if game_over:
-        return
-
-    best_score = -100
-    move = None
-
-    for i in range(9):
-
-        if board[i] == "":
-
-            board[i] = "O"
-
-            score = minimax(
-                board,
-                False
+            btn = ctk.CTkButton(
+                self.board_frame, 
+                text="", 
+                width=100, 
+                height=100,
+                corner_radius=15,
+                font=("Helvetica", 48, "bold"),
+                fg_color=PANEL_COLOR,
+                hover_color=HOVER_COLOR,
+                command=lambda idx=i: self.player_move(idx)
             )
+            row, col = divmod(i, 3)
+            btn.grid(row=row, column=col, padx=10, pady=10)
+            self.buttons.append(btn)
 
-            board[i] = ""
-
-            if score > best_score:
-
-                best_score = score
-                move = i
-
-    if move is not None:
-
-        board[move] = "O"
-
-        buttons[move].config(
-            text="O",
-            fg="#ff5555"
+        # Restart Button
+        self.restart_btn = ctk.CTkButton(
+            self, 
+            text="Restart Game", 
+            width=200, 
+            height=45,
+            corner_radius=20,
+            font=("Helvetica", 16, "bold"),
+            fg_color="#475569",
+            hover_color="#64748B",
+            command=self.reset_game
         )
+        self.restart_btn.pack(pady=20)
 
-    result = check_winner_state(board)
+    # ----------------------------
+    # Game Logic
+    # ----------------------------
+    def check_winner(self, temp_board):
+        wins = [
+            [0, 1, 2], [3, 4, 5], [6, 7, 8], # Rows
+            [0, 3, 6], [1, 4, 7], [2, 5, 8], # Cols
+            [0, 4, 8], [2, 4, 6]             # Diagonals
+        ]
+        for combo in wins:
+            a, b, c = combo
+            if temp_board[a] != "" and temp_board[a] == temp_board[b] == temp_board[c]:
+                return temp_board[a], combo
+        
+        if "" not in temp_board:
+            return "Draw", None
+        return None, None
 
-    handle_result(result)
+    def minimax(self, temp_board, is_maximizing):
+        winner, _ = self.check_winner(temp_board)
+        if winner == "O": return 1
+        elif winner == "X": return -1
+        elif winner == "Draw": return 0
 
-# ----------------------------
-# Result Handling
-# ----------------------------
+        if is_maximizing:
+            best_score = -float('inf')
+            for i in range(9):
+                if temp_board[i] == "":
+                    temp_board[i] = "O"
+                    score = self.minimax(temp_board, False)
+                    temp_board[i] = ""
+                    best_score = max(score, best_score)
+            return best_score
+        else:
+            best_score = float('inf')
+            for i in range(9):
+                if temp_board[i] == "":
+                    temp_board[i] = "X"
+                    score = self.minimax(temp_board, True)
+                    temp_board[i] = ""
+                    best_score = min(score, best_score)
+            return best_score
 
-def handle_result(result):
+    def ai_move(self):
+        if self.game_over: return
+        
+        mode = self.difficulty.get()
+        available_moves = [i for i, spot in enumerate(self.board) if spot == ""]
+        
+        move = None
+        
+        if mode == "Easy":
+            # 100% Random
+            move = random.choice(available_moves) if available_moves else None
+            
+        elif mode == "Medium":
+            # 50% chance of random, 50% optimal
+            if random.random() < 0.5:
+                move = random.choice(available_moves) if available_moves else None
+        
+        if move is None: # Hard mode or Medium fallback
+            best_score = -float('inf')
+            for i in available_moves:
+                self.board[i] = "O"
+                score = self.minimax(self.board, False)
+                self.board[i] = ""
+                if score > best_score:
+                    best_score = score
+                    move = i
 
-    global player_score
-    global ai_score
-    global game_over
+        if move is not None:
+            self.board[move] = "O"
+            self.buttons[move].configure(text="O", text_color=O_COLOR)
+            
+        self.evaluate_board()
 
-    if result is None:
+    def player_move(self, index):
+        if self.game_over or self.board[index] != "":
+            return
 
-        status_label.config(
-            text="Your Turn"
-        )
-        return
+        # Player move
+        self.board[index] = "X"
+        self.buttons[index].configure(text="X", text_color=X_COLOR)
+        
+        winner, _ = self.check_winner(self.board)
+        if winner:
+            self.evaluate_board()
+            return
+            
+        self.status_label.configure(text="AI Thinking...", text_color="#F59E0B") # Yellow
+        self.update()
+        
+        # Small delay for realism
+        self.after(400, self.ai_move)
 
-    game_over = True
+    def evaluate_board(self):
+        winner, combo = self.check_winner(self.board)
+        
+        if not winner:
+            self.status_label.configure(text="Your Turn", text_color="#10B981")
+            return
+            
+        self.game_over = True
+        
+        if winner == "X":
+            self.player_score += 1
+            self.status_label.configure(text="You Win! 🎉", text_color=X_COLOR)
+            self.highlight_win(combo, X_COLOR)
+        elif winner == "O":
+            self.ai_score += 1
+            self.status_label.configure(text="AI Wins! 🤖", text_color=O_COLOR)
+            self.highlight_win(combo, O_COLOR)
+        else:
+            self.status_label.configure(text="It's a Draw! 🤝", text_color="#94A3B8")
+            
+        self.score_label.configure(text=f"Player (X): {self.player_score}    AI (O): {self.ai_score}")
 
-    if result == "X":
+    def highlight_win(self, combo, color):
+        if not combo: return
+        for idx in combo:
+            # Highlight the winning buttons
+            self.buttons[idx].configure(fg_color="#334155")
 
-        player_score += 1
+    def reset_game(self, _=None):
+        self.board = [""] * 9
+        self.game_over = False
+        
+        for btn in self.buttons:
+            btn.configure(text="", fg_color=PANEL_COLOR)
+            
+        self.status_label.configure(text="Your Turn", text_color="#10B981")
 
-        status_label.config(
-            text="You Win!"
-        )
-
-    elif result == "O":
-
-        ai_score += 1
-
-        status_label.config(
-            text="AI Wins!"
-        )
-
-    else:
-
-        status_label.config(
-            text="It's a Draw!"
-        )
-
-    score_label.config(
-        text=f"Player (X): {player_score}    AI (O): {ai_score}"
-    )
-
-# ----------------------------
-# Player Move
-# ----------------------------
-
-def button_click(index):
-
-    global game_over
-
-    if game_over:
-        return
-
-    if board[index] != "":
-        return
-
-    board[index] = "X"
-
-    buttons[index].config(
-        text="X",
-        fg="#00bfff"
-    )
-
-    result = check_winner_state(board)
-
-    if result:
-
-        handle_result(result)
-        return
-
-    status_label.config(
-        text="AI Thinking..."
-    )
-
-    root.after(
-        300,
-        ai_move
-    )
-
-# ----------------------------
-# Restart
-# ----------------------------
-
-def restart_game():
-
-    global board
-    global game_over
-
-    board = [""] * 9
-
-    game_over = False
-
-    for button in buttons:
-
-        button.config(
-            text=""
-        )
-
-    status_label.config(
-        text="Your Turn"
-    )
-
-# ----------------------------
-# Create Board
-# ----------------------------
-
-for row in range(3):
-
-    for col in range(3):
-
-        index = row * 3 + col
-
-        button = tk.Button(
-            board_frame,
-            text="",
-            width=5,
-            height=2,
-            font=("Helvetica", 28, "bold"),
-            bg="#252526",
-            fg="white",
-            activebackground="#3c3c3c",
-            command=lambda idx=index: button_click(idx)
-        )
-
-        button.grid(
-            row=row,
-            column=col,
-            padx=6,
-            pady=6
-        )
-
-        buttons.append(button)
-
-# ----------------------------
-# Restart Button
-# ----------------------------
-
-restart_button = tk.Button(
-    root,
-    text="Restart Game",
-    command=restart_game,
-    bg="#c0392b",
-    fg="black",
-    font=("rubintek", 12, "bold"),
-    width=18
-)
-
-restart_button.pack(
-    pady=20
-)
-
-# ----------------------------
-# Run
-# ----------------------------
-
-root.mainloop()
+if __name__ == "__main__":
+    app = TicTacToeApp()
+    app.mainloop()
